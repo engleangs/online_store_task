@@ -1,5 +1,6 @@
 package co.onlinestore.service;
 
+import co.onlinestore.data.Conversation;
 import co.onlinestore.data.Customer;
 import co.onlinestore.data.CustomerRowMapper;
 import com.google.gson.Gson;
@@ -17,15 +18,15 @@ import java.util.*;
 @Service
 public class DataServiceImpl implements DataService {
     private static final Logger LOGGER = LoggerFactory.getLogger( DataServiceImpl.class);
+    private static final Type MAP_TYPE = new TypeToken<Map<String,String>>(){}.getType();
+    private final String fetchFromFB = "first_name,last_name,profile_pic";
+    private final String FACEBOOK_GRAPH ="https://graph.facebook.com";
     @Autowired
     private Gson gson;
     @Autowired
     private JdbcTemplate jdbcTemplate;
-    private static final Type MAP_TYPE = new TypeToken<Map<String,String>>(){}.getType();
     @Autowired
     private HttpService httpService;
-    private final String fetchFromFB = "first_name,last_name,profile_pic";
-    private final String FACEBOOK_GRAPH ="https://graph.facebook.com";
 
     @Override
     public Customer get(String id) {
@@ -93,18 +94,13 @@ public class DataServiceImpl implements DataService {
 
 
     @Override
-    public void storeMsg(Map<String, String> msg,long timestamp) {
-        String content = msg.get("content");
-        String senderId = msg.get("sender_id");
-        String receiverId = msg.get("receiver_id");
-        String type = msg.get("type");
-        String msgId = msg.get("id");
-        String pageId = msg.get("page_id");
-        String companyId = getCompanyId( pageId);
-        Date createdAt = new Date( timestamp);
+    public void storeMsg(Conversation conversation) {
+
         String sql = " INSERT INTO conversation(id,created_at,sender_id,receiver_id,content,type,page_id,company_id)" +
                 "   VALUES( ? , ? , ? , ? , ? , ? , ? , ? ) ON DUPLICATE KEY UPDATE content= ? ";
-        Object[] param = { msgId, createdAt, senderId,receiverId,content,type,pageId,companyId,content};
+        Object[] param = { conversation.getId(), conversation.getCreatedAt(), conversation.getSenderId(),
+                conversation.getReceiverId(),conversation.getContent(),conversation.getType(),
+                conversation.getPageId(),conversation.getCompanyId(),conversation.getContent()};
         jdbcTemplate.update(sql, param);
 
 

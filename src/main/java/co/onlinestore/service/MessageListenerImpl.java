@@ -1,5 +1,6 @@
 package co.onlinestore.service;
 
+import co.onlinestore.data.Conversation;
 import co.onlinestore.data.Customer;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -12,7 +13,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,40 +25,40 @@ public class MessageListenerImpl implements MessageListener {
     private DataService dataService;
     @Autowired
     private Gson gson;
+    @Autowired
+    private CacheService cacheService;
 
     @KafkaListener(id = "task_id", topics = "fb_receive_message")
     @Override
     public void listen(String in) {
-        LOGGER.info("recieve message" + in);
+        LOGGER.info("recieve message from broker :" + in);
         try {
             Map<String, Object> msgItem = gson.fromJson(in, MAP_TYPE);
             List<Map<String, Object>> items = (List<Map<String, Object>>) msgItem.get("entry");
             Map<String, Object> item = items.get(0);
             if (item.containsKey("messaging")) {
                 List<Map<String, Object>> msgList = (List<Map<String, Object>>) item.get("messaging");
-                Map<String, Object> messsaging = msgList.get(0);
-                if (messsaging.containsKey("sender")) {
-                    Map<String, Object> sender = (Map<String, Object>) messsaging.get("sender");
-                    Map<String, Object> receiver = (Map<String, Object>) messsaging.get("recipient");
-                    Map<String, Object> message = (Map<String, Object>) messsaging.get("message");
+                Map<String, Object> messaging = msgList.get(0);
+                if (messaging.containsKey("sender")) {
+                    Map<String, Object> sender = (Map<String, Object>) messaging.get("sender");
+                    Map<String, Object> receiver = (Map<String, Object>) messaging.get("recipient");
+                    Map<String, Object> message = (Map<String, Object>) messaging.get("message");
                     String pageId = receiver.get("id") + "";
                     String customerId = sender.get("id") + "";
                     if( message !=null) {
                         String msgId = message.get("mid") + "";
                         String text = message.get("text") + "";
-                        Map<String, String> msgContent = new LinkedHashMap<>();
-                        msgContent.put("sender_id", customerId);
-                        msgContent.put("receiver_id", pageId);
-                        msgContent.put("type", "text"); //todo check all type of message
-                        msgContent.put("page_id", pageId);
-                        msgContent.put("content", text);
-                        msgContent.put("id", msgId);
+                        Conversation conversation = new Conversation(customerId, pageId, "text",pageId, dataService.getCompanyId(pageId),msgId, text);
+
                         long time = new Date().getTime();
                         if (item.containsKey("time")) {
                             Number number = (Number)item.get("time");
                             time = number.longValue();
                         }
-                        dataService.storeMsg(msgContent, time);
+                        conversation.setCreatedAt( new Date( time));
+                        dataService.storeMsg( conversation);//store in db
+                        cacheService.cache(conversation); //cache also in db
+
                     }
 
                     String pageToken = dataService.getPageToken(pageId);

@@ -1,9 +1,9 @@
 package co.onlinestore.service;
 
+import co.onlinestore.data.Conversation;
 import co.onlinestore.data.Customer;
 
 import java.io.IOException;
-import java.util.Map;
 
 
 public interface DataService {
@@ -13,5 +13,5 @@ public interface DataService {
     Customer fetchFromFb(String id,String pageToken) throws IOException;
     String getPageToken(String pageId);
     String getCompanyId(String pageId);
-    void storeMsg(Map<String,String>msg,long timestamp);
+    void storeMsg(Conversation conversation);
 }
