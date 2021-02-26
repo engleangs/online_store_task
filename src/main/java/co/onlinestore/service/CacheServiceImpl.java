@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Service
@@ -53,8 +54,9 @@ public class CacheServiceImpl implements CacheService {
     }
 
     private void store(String id, String content) {
-        String sql = "INSERT INTO conversation_cache (id,content) VALUES( ? , ? ) ON DUPLICATE KEY UPDATE content= ?";
-        Object[] param = {id, content, content};
+        String sql = "INSERT INTO conversation_cache (id,content,last_update)  " +
+                " VALUES( ? , ? , ? ) ON DUPLICATE KEY UPDATE content= ?";
+        Object[] param = {id, content, new Date(),content};
         jdbcTemplate.update(sql, param);
     }
 }
