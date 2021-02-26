@@ -1,5 +1,6 @@
 package co.onlinestore.service;
 
+import co.onlinestore.config.KafkaTopic;
 import co.onlinestore.data.Conversation;
 import co.onlinestore.data.Customer;
 import com.google.gson.Gson;
@@ -27,8 +28,15 @@ public class MessageListenerImpl implements MessageListener {
     private Gson gson;
     @Autowired
     private CacheService cacheService;
+    @KafkaListener(id = "task_sender", topics = KafkaTopic.FB_MESSAGE_REPLY)
+    public void onSend(String msg){
+        LOGGER.info("sending msg to fb "+msg);
+        Map<String,Object>messageMap  = gson.fromJson( msg, MAP_TYPE);
+        //todo store and cache conversation as well
 
-    @KafkaListener(id = "task_id", topics = "fb_receive_message")
+    }
+
+    @KafkaListener(id = "task_receiver", topics = KafkaTopic.FB_MESAGE_RECEIVE)
     @Override
     public void listen(String in) {
         LOGGER.info("recieve message from broker :" + in);
