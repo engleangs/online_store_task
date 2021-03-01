@@ -10,6 +10,7 @@ public class Customer {
     private String createdBy;
     private Date createdAt;
     private boolean newCustomer;
+    private String companyId;
     public Customer(){
 
     }
@@ -77,5 +78,13 @@ public class Customer {
 
     public void setNewCustomer(boolean newCustomer) {
         this.newCustomer = newCustomer;
+    }
+
+    public String getCompanyId() {
+        return companyId;
+    }
+
+    public void setCompanyId(String companyId) {
+        this.companyId = companyId;
     }
 }

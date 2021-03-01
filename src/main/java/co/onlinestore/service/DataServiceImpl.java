@@ -53,6 +53,7 @@ public class DataServiceImpl implements DataService {
     @Override
     public Customer fetchFromFb(String id,String pageToken) throws IOException {
         String url = FACEBOOK_GRAPH+"/"+id+"?fields="+fetchFromFB+"&access_token="+pageToken;
+        LOGGER.info("begin to fetch profile from facebook : "+url);
         Map<String,String> headers = Collections.singletonMap("Content-Type","application/json");
         String result =    httpService.get(url, headers);
         try{
@@ -110,13 +111,15 @@ public class DataServiceImpl implements DataService {
     @Override
     public void store( Customer customer) {
         if (customer.isNewCustomer()) {
-            String sql = "INSERT INTO ecom_customers(id,name,created_at,updated_at,photo) " +
-                    "       VALUES ( ? , ? , ?, ?, ?) ";//todo
-            Object[] param = { customer.getId() , customer.getName(), new Date(), new Date(), customer.getPhoto() };
+            String sql = "INSERT INTO ecom_customers(id,name,created_at,updated_at,photo,company_id) " +
+                    "       VALUES ( ? , ? , ?, ?, ?, ? ) ON  DUPLICATE KEY UPDATE name = ?, updated_at = ? ,photo=?  ";
+            Object[] param = { customer.getId() , customer.getName(), new Date(), new Date(),
+                    customer.getPhoto(), customer.getCompanyId() , customer.getName() , new Date() , customer.getPhoto()
+            };
             jdbcTemplate.update(sql, param);
         } else {
-            String sql = "UPDATE ecom_customers SET name = ? ,updated_at= ?,photo = ? WHERE id = ? ";
-            Object[] param = {  customer.getName(),new Date(), customer.getPhoto(), customer.getId()};
+            String sql = "UPDATE ecom_customers SET name = ? ,updated_at= ?,photo = ? , company_id = ? WHERE id = ? ";
+            Object[] param = {  customer.getName(),new Date(), customer.getPhoto(), customer.getCompanyId(), customer.getId()};
             jdbcTemplate.update( sql, param);
         }
     }

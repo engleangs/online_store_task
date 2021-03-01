@@ -22,6 +22,7 @@ public class MessageListenerImpl implements MessageListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageListenerImpl.class);
     private static Type MAP_TYPE = new TypeToken<Map<String, Object>>() {
     }.getType();
+    private static final Type MAP_STRING_TYPE = new TypeToken<Map<String, String>>() {}.getType();
     @Autowired
     private DataService dataService;
     @Autowired
@@ -30,9 +31,24 @@ public class MessageListenerImpl implements MessageListener {
     private CacheService cacheService;
     @KafkaListener(id = "task_sender", topics = KafkaTopic.FB_MESSAGE_REPLY)
     public void onSend(String msg){
-        LOGGER.info("sending msg to fb "+msg);
-        Map<String,Object>messageMap  = gson.fromJson( msg, MAP_TYPE);
-        //todo store and cache conversation as well
+        LOGGER.info("sending msg to fb ["+msg +"]");
+        Map<String,String>messageMap  = gson.fromJson( msg, MAP_STRING_TYPE);
+        String pageId = messageMap.get("pageId")+ "";
+        String customerId = messageMap.get("receiverId");
+        String senderId = messageMap.get("senderId");
+        String companyId = dataService.getCompanyId(pageId);
+        String message = messageMap.get("content");
+        String type = messageMap.get("type");
+        Conversation conversation = new Conversation(senderId,customerId,type,pageId,companyId,messageMap.get("id"), message);
+        conversation.setCreatedAt( new Date());
+        dataService.storeMsg( conversation);
+        LOGGER.info("done storing reply message..");
+        String id1 = conversation.getPageId()+":"+conversation.getReceiverId();
+        String id2  = conversation.getReceiverId()+":"+conversation.getPageId();
+        cacheService.cache(conversation, id1,id2);
+        LOGGER.info("cache conversation");
+
+
 
     }
 
@@ -53,10 +69,17 @@ public class MessageListenerImpl implements MessageListener {
                     Map<String, Object> message = (Map<String, Object>) messaging.get("message");
                     String pageId = receiver.get("id") + "";
                     String customerId = sender.get("id") + "";
+                    String companyId = dataService.getCompanyId(pageId);
+                    String pageToken = dataService.getPageToken(pageId);
+                    if( pageToken == null){
+                        LOGGER.info("it's not for page so it's done : "+pageId);
+                        return;
+                    }
+
                     if( message !=null) {
                         String msgId = message.get("mid") + "";
                         String text = message.get("text") + "";
-                        Conversation conversation = new Conversation(customerId, pageId, "text",pageId, dataService.getCompanyId(pageId),msgId, text);
+                        Conversation conversation = new Conversation(customerId, pageId, "text",pageId, companyId ,msgId, text);
 
                         long time = new Date().getTime();
                         if (item.containsKey("time")) {
@@ -65,11 +88,13 @@ public class MessageListenerImpl implements MessageListener {
                         }
                         conversation.setCreatedAt( new Date( time));
                         dataService.storeMsg( conversation);//store in db
-                        cacheService.cache(conversation); //cache also in db
+                        String id1 = customerId+":"+ pageId;
+                        String id2  = pageId+":"+customerId;
+                        cacheService.cache(conversation,id1,id2); //cache also in db
 
                     }
 
-                    String pageToken = dataService.getPageToken(pageId);
+
                     Customer customer = dataService.get(customerId);
                     if (customer == null) {
                         try {
@@ -78,6 +103,7 @@ public class MessageListenerImpl implements MessageListener {
                             LOGGER.error("error fetching customer info", e);
                         }
                         if (customer != null) {
+                            customer.setCompanyId( companyId);
                             dataService.store(customer);
                         }
                     } else if (dataService.shouldUpdate(customer)) {
@@ -87,6 +113,7 @@ public class MessageListenerImpl implements MessageListener {
                             LOGGER.error("error fetch customer info", e);
                         }
                         if (customer != null) {
+                            customer.setCompanyId( companyId);
                             dataService.store(customer);
                         }
                     }

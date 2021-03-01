@@ -24,9 +24,9 @@ public class CacheServiceImpl implements CacheService {
     }.getType();
 
     @Override
-    public void cache(Conversation conversation) {
-        String id1 = conversation.getSenderId() + ":" + conversation.getReceiverId();
-        String id2 = conversation.getReceiverId() + ":" + conversation.getSenderId();
+    public void cache(Conversation conversation ,String id1, String id2) {
+//        String id1 = conversation.getSenderId() + ":" + conversation.getReceiverId();
+//        String id2 = conversation.getReceiverId() + ":" + conversation.getSenderId();
         Object[] p = {id1, id2};
         String json;
         List<CacheItem> itemList = jdbcTemplate.query("SELECT id,content FROM conversation_cache WHERE id = ? or id =?",

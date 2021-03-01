@@ -27,3 +27,11 @@ dependencies {
 
 
 }
+bootJar {
+    manifest {
+        attributes 'Start-Class': 'co.onlinestore.Application'
+    }
+}
+springBoot {
+    mainClassName = 'co.onlinestore.Application'
+}
