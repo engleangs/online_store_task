@@ -3,17 +3,26 @@ package co.onlinestore.service;
 import co.onlinestore.data.Conversation;
 import co.onlinestore.data.Customer;
 import co.onlinestore.data.CustomerRowMapper;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.omg.PortableInterceptor.LOCATION_FORWARD;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.*;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class DataServiceImpl implements DataService {
@@ -27,7 +36,23 @@ public class DataServiceImpl implements DataService {
     private JdbcTemplate jdbcTemplate;
     @Autowired
     private HttpService httpService;
+    private LoadingCache<String,String> companyCache = CacheBuilder.newBuilder()
+            .maximumSize(1000).
+                    expireAfterAccess(5, TimeUnit.HOURS).
+                    build(new CacheLoader<String, String>() {
+        @Override
+        public String load(String key) throws Exception {
+            LOGGER.info("coming to load ..."+key);
+            return getCompanyIdFromDb( key);
+        }
+    });
 
+    @PostConstruct
+    private void test(){
+//      String compnayId =   getCompanyId("3548272971904782");
+//      LOGGER.info("company id : " + compnayId);
+//      LOGGER.info("compnay id : " +getCompanyId("3548272971904782"));
+    }
     @Override
     public Customer get(String id) {
         String sql = " SELECT * FROM ecom_customers WHERE id = ? ";
@@ -84,11 +109,24 @@ public class DataServiceImpl implements DataService {
 
     @Override
     public String getCompanyId(String pageId) {
+        try {
+
+            return companyCache.getUnchecked(pageId);
+        }catch (CacheLoader.InvalidCacheLoadException  e){
+            return null;
+        }
+
+    }
+
+    @Override
+    public String getCompanyIdFromDb(String pageId) {
+
         String sql =" SELECT company_id FROM social_pages WHERE page_id = ? ";//todo get from cache
         Object[] param = { pageId};
         List<Map<String,Object>> items = jdbcTemplate.queryForList(sql, param);
         if( items.size() > 0) {
-            return items.get(0).get("company_id")+"";
+            String companyID = items.get(0).get("company_id")+"";
+            return companyID;
         }
         return null;
     }

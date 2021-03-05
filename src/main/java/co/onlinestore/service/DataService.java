@@ -13,5 +13,6 @@ public interface DataService {
     Customer fetchFromFb(String id,String pageToken) throws IOException;
     String getPageToken(String pageId);
     String getCompanyId(String pageId);
+    String getCompanyIdFromDb(String pageId);
     void storeMsg(Conversation conversation);
 }
