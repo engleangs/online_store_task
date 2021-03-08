@@ -1,5 +1,6 @@
 package co.onlinestore.service;
 
+import co.onlinestore.data.Comment;
 import co.onlinestore.data.PageEntry;
 import co.onlinestore.data.PageLog;
 import co.onlinestore.data.Post;
@@ -11,18 +12,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import java.util.Date;
-import java.util.UUID;
 
 @Service
 public class DataParserObjectServiceImpl implements DataParserObjectService
 
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger( DataParserObjectServiceImpl.class);
     @Autowired
     private DataService dataService;
-
-    private static final Logger LOGGER = LoggerFactory.getLogger( DataParserObjectServiceImpl.class);
 //    @PostConstruct
 //    private void test(){
 //        String json ="{\n" +
@@ -117,6 +115,11 @@ public class DataParserObjectServiceImpl implements DataParserObjectService
     @Override
     public Post pagePost(String json) {
         PageEntry pageEntry = page( json);
+        return pagePost(pageEntry);
+    }
+
+    @Override
+    public Post pagePost(PageEntry pageEntry) {
         if( pageEntry !=null){
             String pageId = pageEntry.getPageId();
             JsonObject jsonObject = pageEntry.getJsonObject();
@@ -135,10 +138,38 @@ public class DataParserObjectServiceImpl implements DataParserObjectService
             }
             String verb = jsonObject.get("verb").getAsString();
             String companyId = dataService.getCompanyId( pageId);
-            Post post = new  Post(verb,UUID.randomUUID().toString(), content, item, "", null, new Date(), null,  companyId, refId, photoId, photo, pageId);
+            Post post = new  Post(verb,refId, content, item, "", null, new Date(), null,  companyId, refId, photoId, photo, pageId);
             post.setPublished( published);
             return post;
 
+        }
+        return null;
+    }
+
+    @Override
+    public Comment pageComment(String json) {
+        PageEntry pageEntry = page(json);
+        return pageComment(pageEntry);
+    }
+
+    @Override
+    public Comment pageComment(PageEntry pageEntry) {
+        if(pageEntry !=null) {
+            String pageId = pageEntry.getPageId();
+            JsonObject value = pageEntry.getJsonObject();
+            String commentId = value.get("comment_id").getAsString();
+            long timeStamp = value.get("created_time").getAsLong();
+            Date createdAt = new Date( timeStamp);
+            JsonObject from = value.get("from").getAsJsonObject();
+            String createdBy = from.get("id").getAsString();
+            String type = value.get("item").getAsString();
+            String content = value.get("message").getAsString();
+            String postRefId = value.get("post_id").getAsString();
+            String verb = value.get("verb").getAsString();
+            String companyId = dataService.getCompanyId( pageId);
+            Comment comment = new Comment(commentId,content,type,createdBy,createdAt,null,null, companyId,postRefId,postRefId,null,1,pageId);
+            comment.setVerb( verb);
+            return comment;
         }
         return null;
     }
